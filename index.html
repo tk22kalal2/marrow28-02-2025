@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Question Splitter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script defer src="script.js"></script>
 </head>
 <body>
-    <h2>Upload PDF to Split Questions</h2>
-    <input type="file" id="pdfUpload" accept="application/pdf">
-    <button onclick="processPDF()">Start Processing</button>
+    <h2>Upload Screenshot to Split Questions</h2>
+    <input type="file" id="imageUpload" accept="image/*">
+    <button onclick="processImage()">Start Processing</button>
     
     <div id="imageContainer">
         <img id="outputImage" style="display: none; width: 100%; max-width: 500px; margin-top: 10px;">
