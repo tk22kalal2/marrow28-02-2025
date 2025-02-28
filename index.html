@@ -16,6 +16,12 @@
         <img id="outputImage" style="display: none; width: 100%; max-width: 500px; margin-top: 10px;">
     </div>
     
+    <button id="cropBtn" style="display: none; margin-top: 10px;" onclick="cropCurrentImage()">Crop</button>
     <button id="nextBtn" style="display: none; margin-top: 10px;" onclick="showNextImage()">Next Image</button>
+
+    <h3>Cropped Output</h3>
+    <div id="output">
+        <canvas id="canvas" style="display: none;"></canvas>
+    </div>
 </body>
 </html>
