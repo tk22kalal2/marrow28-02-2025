@@ -5,17 +5,158 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Question Splitter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
-    <script defer src="script.js"></script>
 </head>
 <body>
     <h2>Upload Screenshot to Split Questions</h2>
     <input type="file" id="imageUpload" accept="image/*">
     <button onclick="processImage()">Start Processing</button>
-    
-    <div id="imageContainer">
-        <img id="outputImage" style="display: none; width: 100%; max-width: 500px; margin-top: 10px;">
+    <div id="previewContainer">
+        <canvas id="canvas"></canvas>
     </div>
-    
-    <button id="nextBtn" style="display: none; margin-top: 10px;" onclick="showNextImage()">Next Image</button>
+    <button id="nextBtn" onclick="showNextImage()" style="display: none;">Next</button>
+    <button id="cropBtn" onclick="cropImage()" style="display: none;">Crop</button>
+    <div id="croppedOutput"></div>
+
+    <script>
+        let splitImages = [];
+        let currentIndex = 0;
+        let uploadedImage = null;
+        
+        function processImage() {
+            const input = document.getElementById('imageUpload');
+            if (!input.files.length) return alert("Please upload an image!");
+            
+            const img = new Image();
+            const file = input.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            
+            img.onload = function() {
+                uploadedImage = img;
+                detectQuestions(img);
+            };
+        }
+        
+        function detectQuestions(img) {
+            Tesseract.recognize(img, 'eng').then(({ data }) => {
+                let positions = [];
+                let textLines = data.lines;
+                textLines.forEach((line) => {
+                    if (line.text.match(/^\d+\./)) {
+                        positions.push(line.bbox.y0);
+                    }
+                });
+                positions.push(img.height);
+                splitImage(img, positions);
+            });
+        }
+        
+        function splitImage(img, positions) {
+            splitImages = [];
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            for (let i = 0; i < positions.length - 1; i++) {
+                let y1 = positions[i];
+                let y2 = positions[i + 1];
+                let height = y2 - y1;
+                
+                canvas.width = img.width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, y1, img.width, height, 0, 0, img.width, height);
+                
+                splitImages.push(canvas.toDataURL("image/png"));
+            }
+            
+            currentIndex = 0;
+            showNextImage();
+        }
+        
+        function showNextImage() {
+            if (currentIndex < splitImages.length) {
+                const canvas = document.getElementById("canvas");
+                const ctx = canvas.getContext("2d");
+                const img = new Image();
+                
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                };
+                
+                img.src = splitImages[currentIndex];
+                document.getElementById("nextBtn").style.display = "block";
+                document.getElementById("cropBtn").style.display = "block";
+                
+                currentIndex++;
+                if (currentIndex >= splitImages.length) {
+                    document.getElementById("nextBtn").style.display = "none";
+                }
+            }
+        }
+
+        function cropImage() {
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            
+            Tesseract.recognize(canvas, 'eng').then(({ data }) => {
+                let words = data.words;
+                let optionsStartY = detectOptionsStart(words);
+                let questionEndY = detectQuestionEnd(words, optionsStartY);
+                
+                if (optionsStartY === null || questionEndY === null) {
+                    alert("Could not detect question and options.");
+                    return;
+                }
+                
+                const croppedCanvas = document.createElement("canvas");
+                const croppedCtx = croppedCanvas.getContext("2d");
+                croppedCanvas.width = canvas.width;
+                croppedCanvas.height = optionsStartY - questionEndY;
+                
+                croppedCtx.drawImage(
+                    canvas,
+                    0, questionEndY, canvas.width, optionsStartY - questionEndY,
+                    0, 0, canvas.width, optionsStartY - questionEndY
+                );
+                
+                let croppedImage = new Image();
+                croppedImage.src = croppedCanvas.toDataURL("image/png");
+                document.getElementById("croppedOutput").innerHTML = "";
+                document.getElementById("croppedOutput").appendChild(croppedImage);
+            });
+        }
+
+        function detectOptionsStart(words) {
+            for (let i = 0; i < words.length; i++) {
+                if (["A.", "B.", "C.", "D."].includes(words[i].text.trim())) {
+                    return words[i].bbox.y0;
+                }
+            }
+            return null;
+        }
+
+        function detectQuestionEnd(words, optionsStartY) {
+            let lastTextY = 0;
+            let largeGapDetected = false;
+            
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                const currentY = word.bbox.y1;
+                
+                if (currentY >= optionsStartY) break;
+                if (lastTextY > 0 && (currentY - lastTextY) > 20) {
+                    largeGapDetected = true;
+                    break;
+                }
+                lastTextY = currentY;
+            }
+            return largeGapDetected ? lastTextY : null;
+        }
+    </script>
 </body>
 </html>
