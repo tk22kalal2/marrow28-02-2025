@@ -43,16 +43,20 @@ async function makeQuestion() {
         return;
     }
 
-    getFormattedQuestion(text);
+    // Get the cropped image URL from cropping.js
+    const croppedCanvas = document.getElementById("canvas");
+    const croppedImageURL = croppedCanvas.toDataURL("image/png");
+
+    getFormattedQuestion(text, croppedImageURL);
 }
 
-async function getFormattedQuestion(text) {
+async function getFormattedQuestion(text, croppedImageURL) {
     logMessage("Sending extracted text to Groq API...");
 
     const requestData = {
         model: "mixtral-8x7b-32768",
         messages: [
-            { role: "system", content: "Extract and format the given text into a structured question format: \n\nQuestion:\nOptions:\nA) ...\nB) ...\nC) ...\nD) ...\nCorrect Answer:\nExplanation:" },
+            { role: "system", content: "Extract and format the given text into a structured question format as follows:\n\nOptions:\nA) ...\nB) ...\nC) ...\nD) ...\nCorrect Answer:\nExplanation:" },
             { role: "user", content: text }
         ],
         max_tokens: 300
@@ -74,6 +78,12 @@ async function getFormattedQuestion(text) {
 
         if (result.choices && result.choices.length > 0) {
             const formattedQuestion = result.choices[0].message.content;
+            
+            // Show cropped image
+            document.getElementById("croppedQuestionImage").src = croppedImageURL;
+            document.getElementById("croppedImageFrame").style.display = "block";
+
+            // Show formatted text
             document.getElementById("generatedQuestion").innerText = formattedQuestion;
             document.getElementById("questionFrame").style.display = "block";
 
