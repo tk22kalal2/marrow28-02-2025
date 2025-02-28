@@ -71,7 +71,7 @@ function showNextImage() {
     }
 }
 
-function cropCurrentImage() {
+async function cropCurrentImage() {
     let outputImage = document.getElementById("outputImage");
     if (!outputImage.src) {
         alert("No image displayed to crop!");
@@ -114,25 +114,7 @@ function cropCurrentImage() {
             return;
         }
 
-        if (questionEndY >= optionsStartY || questionEndY < 0 || optionsStartY > canvas.height) {
-            alert("Invalid cropping dimensions detected! Adjusting...");
-            console.error("Invalid cropping dimensions. QuestionEndY:", questionEndY, "OptionsStartY:", optionsStartY);
-    
-            const cropStartY = Math.max(0, questionEndY - 20);
-            const cropEndY = Math.min(canvas.height, optionsStartY + 20);
-    
-            if (cropEndY <= cropStartY) {
-                alert("Unable to determine valid cropping area. Please check the image.");
-                console.error("Fallback cropping dimensions are invalid.");
-                return;
-            }
-            alert("Fallback cropping applied!");
-            performCropping(cropStartY, cropEndY);
-        } else {
-            alert("Cropping with detected dimensions...");
-            performCropping(questionEndY, optionsStartY);
-        }
-        
+        performCropping(questionEndY, optionsStartY);
         await worker.terminate();
     };
 }
@@ -178,27 +160,20 @@ function detectOptionsStart(words) {
 
 function detectQuestionEnd(words, optionsStartY) {
     let lastTextY = 0;
-    let largeGapDetected = false;
-
+    let significantGapThreshold = 30;
+    
     for (let i = 0; i < words.length; i++) {
         const word = words[i];
         const currentY = word.bbox.y1;
-
+        
         if (currentY >= optionsStartY) break;
-
-        if (lastTextY > 0 && (currentY - lastTextY) > 20) {
-            largeGapDetected = true;
-            break;
+        
+        if (lastTextY > 0 && (currentY - lastTextY) > significantGapThreshold) {
+            console.log("Significant gap detected, considering this as question end.");
+            return lastTextY;
         }
-
         lastTextY = currentY;
     }
-    if (largeGapDetected) {
-        alert("Large vertical gap detected, assuming question end.");
-        console.log("Question end detected due to large vertical gap.");
-        return lastTextY;
-      }
     
-      console.warn("No clear question end detected.");
-      return lastTextY;
-    }
+    return lastTextY;
+}
