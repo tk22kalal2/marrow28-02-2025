@@ -5,17 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Question Splitter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
-    <script defer src="script.js"></script>
 </head>
 <body>
     <h2>Upload Screenshot to Split Questions</h2>
     <input type="file" id="imageUpload" accept="image/*">
     <button onclick="processImage()">Start Processing</button>
-    
+
     <div id="imageContainer">
         <img id="outputImage" style="display: none; width: 100%; max-width: 500px; margin-top: 10px;">
     </div>
-    
+
     <button id="cropBtn" style="display: none; margin-top: 10px;" onclick="cropCurrentImage()">Crop</button>
     <button id="nextBtn" style="display: none; margin-top: 10px;" onclick="showNextImage()">Next Image</button>
     <button id="makeQuestionBtn" style="display: none; margin-top: 10px;" onclick="makeQuestion()">Make Question</button>
@@ -29,10 +28,13 @@
     <h3>Final Question</h3>
     <div id="questionFrame" style="border: 1px solid black; padding: 10px; display: none;">
         <img id="finalCroppedImage" style="width: 100%; max-width: 500px; margin-bottom: 10px;">
-        <p id="questionText"></p>
         <ul id="optionsList"></ul>
         <p><strong>Correct Answer:</strong> <span id="correctAnswer"></span></p>
         <p><strong>Explanation:</strong> <span id="explanation"></span></p>
     </div>
+
+    <script defer src="scripts/imageProcessing.js"></script>
+    <script defer src="scripts/cropping.js"></script>
+    <script defer src="scripts/questionExtraction.js"></script>
 </body>
 </html>
