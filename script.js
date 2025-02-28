@@ -98,19 +98,36 @@ function cropCurrentImage() {
             return;
         }
 
-        let optionsStartY = detectOptionsStart(words);
+        const optionsStartY = detectOptionsStart(words);
         if (optionsStartY === null) {
             alert("No options detected. Ensure they are labeled as A., B., C., D.");
             return;
         }
 
-        let questionEndY = detectQuestionEnd(words, optionsStartY);
+        const questionEndY = detectQuestionEnd(words, optionsStartY);
         if (questionEndY === null) {
             alert("No question end detected.");
             return;
         }
-
-        performCropping(questionEndY, optionsStartY);
+        if (questionEndY >= optionsStartY || questionEndY < 0 || optionsStartY > canvas.height) {
+          alert("Invalid cropping dimensions detected! Adjusting...");
+          console.error("Invalid cropping dimensions. QuestionEndY:", questionEndY, "OptionsStartY:", optionsStartY);
+    
+          // Apply fallback logic to ensure valid cropping
+          const cropStartY = Math.max(0, questionEndY - 20); // Start slightly above detected question end
+          const cropEndY = Math.min(canvas.height, optionsStartY + 20); // End slightly below detected options start
+          if (cropEndY <= cropStartY) {
+            alert("Unable to determine valid cropping area. Please check the image.");
+            console.error("Fallback cropping dimensions are invalid.");
+            return;
+          }
+          alert("Fallback cropping applied!");
+          performCropping(cropStartY, cropEndY);
+        } else {
+          alert("Cropping with detected dimensions...");
+          performCropping(questionEndY, optionsStartY);
+        }
+        
         await worker.terminate();
     };
 }
