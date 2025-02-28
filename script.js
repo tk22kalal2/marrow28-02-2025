@@ -4,28 +4,22 @@ const API_KEY = "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";
 let croppedImages = [];
 let currentIndex = 0;
 
-async function processPDF() {
-    const input = document.getElementById('pdfUpload');
-    if (!input.files.length) return alert("Please upload a PDF!");
+function processImage() {
+    const input = document.getElementById('imageUpload');
+    if (!input.files.length) return alert("Please upload an image!");
     
+    const img = new Image();
     const file = input.files[0];
     const reader = new FileReader();
 
-    reader.onload = async function (e) {
-        const pdfDoc = await PDFLib.PDFDocument.load(e.target.result);
-        const imageCount = pdfDoc.getPageCount();
-        
-        for (let i = 0; i < imageCount; i++) {
-            const page = pdfDoc.getPage(i);
-            const { width, height } = page.getSize();
-            const img = new Image();
-            img.src = page.drawImage();
-            img.onload = function () {
-                detectQuestions(img);
-            };
-        }
+    reader.onload = function (e) {
+        img.src = e.target.result;
     };
-    reader.readAsArrayBuffer(file);
+    reader.readAsDataURL(file);
+
+    img.onload = function () {
+        detectQuestions(img);
+    };
 }
 
 function detectQuestions(img) {
