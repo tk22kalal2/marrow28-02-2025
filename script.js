@@ -9,12 +9,12 @@ function processImage() {
     const file = input.files[0];
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 
-    img.onload = function() {
+    img.onload = function () {
         detectQuestions(img);
     };
 }
@@ -31,6 +31,7 @@ function detectQuestions(img) {
         });
 
         positions.push(img.height); // Add last position (end of image)
+        console.log("Detected positions:", positions);
         splitImage(img, positions);
     });
 }
@@ -52,7 +53,7 @@ function splitImage(img, positions) {
         
         croppedImages.push(canvas.toDataURL("image/png"));
     }
-    
+    console.log("Cropped images count:", croppedImages.length);
     showNextImage();
 }
 
@@ -61,10 +62,11 @@ function showNextImage() {
         let outputImage = document.getElementById("outputImage");
         outputImage.src = croppedImages[currentIndex];
         outputImage.style.display = "block";
-
+        
         document.getElementById("cropBtn").style.display = "block";
         document.getElementById("nextBtn").style.display = currentIndex < croppedImages.length - 1 ? "block" : "none";
         
+        console.log("Displaying cropped image", currentIndex + 1);
         currentIndex++;
     }
 }
@@ -99,40 +101,42 @@ function cropCurrentImage() {
         }
 
         const optionsStartY = detectOptionsStart(words);
+        console.log("Options start detected at:", optionsStartY);
         if (optionsStartY === null) {
             alert("No options detected. Ensure they are labeled as A., B., C., D.");
             return;
         }
 
         const questionEndY = detectQuestionEnd(words, optionsStartY);
+        console.log("Question end detected at:", questionEndY);
         if (questionEndY === null) {
             alert("No question end detected.");
             return;
         }
+
         if (questionEndY >= optionsStartY || questionEndY < 0 || optionsStartY > canvas.height) {
-          alert("Invalid cropping dimensions detected! Adjusting...");
-          console.error("Invalid cropping dimensions. QuestionEndY:", questionEndY, "OptionsStartY:", optionsStartY);
+            alert("Invalid cropping dimensions detected! Adjusting...");
+            console.error("Invalid cropping dimensions. QuestionEndY:", questionEndY, "OptionsStartY:", optionsStartY);
     
-          // Apply fallback logic to ensure valid cropping
-          const cropStartY = Math.max(0, questionEndY - 20); // Start slightly above detected question end
-          const cropEndY = Math.min(canvas.height, optionsStartY + 20); // End slightly below detected options start
-          if (cropEndY <= cropStartY) {
-            alert("Unable to determine valid cropping area. Please check the image.");
-            console.error("Fallback cropping dimensions are invalid.");
-            return;
-          }
-          alert("Fallback cropping applied!");
-          performCropping(cropStartY, cropEndY);
+            const cropStartY = Math.max(0, questionEndY - 20);
+            const cropEndY = Math.min(canvas.height, optionsStartY + 20);
+    
+            if (cropEndY <= cropStartY) {
+                alert("Unable to determine valid cropping area. Please check the image.");
+                console.error("Fallback cropping dimensions are invalid.");
+                return;
+            }
+            alert("Fallback cropping applied!");
+            performCropping(cropStartY, cropEndY);
         } else {
-          alert("Cropping with detected dimensions...");
-          performCropping(questionEndY, optionsStartY);
+            alert("Cropping with detected dimensions...");
+            performCropping(questionEndY, optionsStartY);
         }
         
         await worker.terminate();
     };
 }
 
-// Helper function: Perform cropping
 function performCropping(startY, endY) {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -157,11 +161,12 @@ function performCropping(startY, endY) {
     const output = document.getElementById("output");
     const croppedImage = new Image();
     croppedImage.src = croppedCanvas.toDataURL("image/png");
-    output.innerHTML = ""; // Clear previous cropped image
+    output.innerHTML = "";
     output.appendChild(croppedImage);
+
+    console.log("Cropped image displayed");
 }
 
-// Helper function: Detect options start
 function detectOptionsStart(words) {
     for (let i = 0; i < words.length; i++) {
         if (["A.", "B.", "C.", "D."].includes(words[i].text.trim())) {
@@ -171,7 +176,6 @@ function detectOptionsStart(words) {
     return null;
 }
 
-// Helper function: Detect question end
 function detectQuestionEnd(words, optionsStartY) {
     let lastTextY = 0;
     let largeGapDetected = false;
@@ -180,15 +184,21 @@ function detectQuestionEnd(words, optionsStartY) {
         const word = words[i];
         const currentY = word.bbox.y1;
 
-        if (currentY >= optionsStartY) break; // Stop when we reach options
+        if (currentY >= optionsStartY) break;
 
         if (lastTextY > 0 && (currentY - lastTextY) > 20) {
             largeGapDetected = true;
-            break; // Assume question ends when a large gap is detected
+            break;
         }
 
         lastTextY = currentY;
     }
-
-    return largeGapDetected ? lastTextY : null;
-}
+    if (largeGapDetected) {
+        alert("Large vertical gap detected, assuming question end.");
+        console.log("Question end detected due to large vertical gap.");
+        return lastTextY;
+      }
+    
+      console.warn("No clear question end detected.");
+      return lastTextY;
+    }
