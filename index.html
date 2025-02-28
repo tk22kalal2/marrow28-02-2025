@@ -9,6 +9,31 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v2.1.1/dist/tesseract.min.js"></script>
 
+    <style>
+        #logModal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            height: 400px;
+            background: white;
+            border: 1px solid #000;
+            padding: 10px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        #closeLogBtn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <h2>Upload Screenshot to Split Questions</h2>
@@ -22,7 +47,8 @@
     <button id="cropBtn" style="display: none; margin-top: 10px;" onclick="cropCurrentImage()">Crop Options</button>
     <button id="nextBtn" style="display: none; margin-top: 10px;" onclick="showNextImage()">Next Image</button>
     <button id="makeQuestionBtn" style="display: none; margin-top: 10px;" onclick="makeQuestion()">Make Question</button>
-    
+    <button id="showLogsBtn" style="margin-top: 10px;" onclick="showLogs()">Show Logs</button>
+
     <h3>Cropped Output</h3>
     <div id="output">
         <canvas id="canvas" style="display: none;"></canvas>
@@ -31,6 +57,13 @@
     <h3>Final Question</h3>
     <div id="questionFrame" style="border: 1px solid black; padding: 10px; display: none;">
         <p id="generatedQuestion"></p>
+    </div>
+
+    <!-- Log Modal -->
+    <div id="logModal">
+        <h3>Logs</h3>
+        <pre id="logContent"></pre>
+        <button id="closeLogBtn" onclick="closeLogModal()">Close</button>
     </div>
 
     <script defer src="scripts/cropping.js"></script>
