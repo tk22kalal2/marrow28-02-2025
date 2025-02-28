@@ -33,14 +33,6 @@
             padding: 5px 10px;
             cursor: pointer;
         }
-        #croppedImageFrame {
-            display: none;
-            margin-top: 10px;
-        }
-        #croppedQuestionImage {
-            max-width: 100%;
-            border: 1px solid black;
-        }
     </style>
 </head>
 <body>
@@ -58,13 +50,11 @@
     <button id="showLogsBtn" style="margin-top: 10px;" onclick="showLogs()">Show Logs</button>
 
     <h3>Cropped Output</h3>
-    <canvas id="canvas" style="display: none;"></canvas>
-
-    <h3>Final Question</h3>
-    <div id="croppedImageFrame">
-        <img id="croppedQuestionImage" alt="Cropped question">
+    <div id="output">
+        <canvas id="canvas" style="display: none;"></canvas>
     </div>
 
+    <h3>Final Question</h3>
     <div id="questionFrame" style="border: 1px solid black; padding: 10px; display: none;">
         <p id="generatedQuestion"></p>
     </div>
