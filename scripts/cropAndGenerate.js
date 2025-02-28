@@ -18,12 +18,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const questionFrame = document.getElementById("questionFrame");
     const generatedQuestion = document.getElementById("generatedQuestion");
 
-    window.cropAndGenerateQuestion = async function () {  // ✅ Ensure function is globally accessible
+    async function cropAndGenerateQuestion() {
         if (!outputImage.src) {
             alert("Please preview an image before cropping.");
             return;
         }
 
+        // Step 1: OCR text extraction from previewed image
         logMessage("Starting OCR on the previewed image...");
         const extractedText = await extractTextFromPreviewedImage();
 
@@ -32,6 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        // Step 2: Crop the image before options start
         const croppedImageData = await cropCurrentImage();
 
         if (!croppedImageData) {
@@ -39,6 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        // Step 3: Send extracted text to Groq API
         logMessage("Sending extracted text to Groq API...");
         const formattedQuestion = await generateQuestionFromText(extractedText);
 
@@ -47,8 +50,9 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        // Step 4: Display the formatted output
         displayFormattedQuestion(croppedImageData, formattedQuestion);
-    };
+    }
 
     async function extractTextFromPreviewedImage() {
         if (!outputImage.src) {
@@ -195,11 +199,16 @@ document.addEventListener("DOMContentLoaded", function () {
         generatedQuestion.innerHTML = formattedOutput;
     }
 
-    window.showLogs = function () {
+    // Function to show logs in a pop-up
+    function showLogs() {
         document.getElementById("logModal").style.display = "block";
-    };
+    }
 
-    window.closeLogModal = function () {
+    // Function to close the log modal
+    function closeLogModal() {
         document.getElementById("logModal").style.display = "none";
-    };
+    }
+
+    // Expose function globally
+    window.cropAndGenerateQuestion = cropAndGenerateQuestion;
 });
