@@ -1,9 +1,6 @@
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const API_KEY = "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";
 
-const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const API_KEY = "YOUR_GROQ_API_KEY"; // Replace with actual key
-
 async function makeQuestion() {
     let outputImage = document.getElementById("outputImage");
     if (!outputImage.src) {
