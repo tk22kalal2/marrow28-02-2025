@@ -8,151 +8,145 @@ let uploadedImage = null;
 
 // Handle image upload
 uploadImage.addEventListener("change", (event) => {
-  alert("Uploading image...");
+    console.log("Uploading image...");
 
-  const file = event.target.files[0];
-  if (!file) {
-    alert("No file selected. Please upload an image.");
-    return;
-  }
+    const file = event.target.files[0];
+    if (!file) {
+        console.warn("No file selected. Please upload an image.");
+        alert("No file selected. Please upload an image.");
+        return;
+    }
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.src = e.target.result;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target.result;
 
-    img.onload = () => {
-      alert("Image uploaded successfully! Rendering on canvas...");
-      uploadedImage = img;
+        img.onload = () => {
+            console.log("Image uploaded successfully! Rendering on canvas...");
+            uploadedImage = img;
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
 
-      processButton.disabled = false;
+            processButton.disabled = false;
+        };
     };
-  };
 
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
 });
 
 // Handle process image
 processButton.addEventListener("click", async () => {
-  if (!uploadedImage) {
-    alert("No image uploaded yet. Please upload an image first.");
-    return;
-  }
-
-  try {
-    alert("Starting OCR process...");
-    const worker = await Tesseract.createWorker();
-
-
-    await worker.load();
-    await worker.loadLanguage("eng");
-    await worker.initialize("eng");
-    alert("OCR initialized successfully! Reading image text...");
-
-    const { data: { words } } = await worker.recognize(uploadedImage);
-
-    if (!words || words.length === 0) {
-      alert("No text detected. Ensure the image contains readable text.");
-      return;
+    if (!uploadedImage) {
+        console.error("No image uploaded yet. Please upload an image first.");
+        alert("No image uploaded yet. Please upload an image first.");
+        return;
     }
 
-    alert("Detecting options and question...");
+    try {
+        console.log("Starting OCR process...");
+        
+        const worker = await Tesseract.createWorker("eng");
 
-    const optionsStartY = detectOptionsStart(words);
-    if (optionsStartY === null) {
-      alert("No options detected. Check format.");
-      return;
+        console.log("OCR initialized successfully! Reading image text...");
+        const { data: { words } } = await worker.recognize(uploadedImage);
+
+        if (!words || words.length === 0) {
+            console.warn("No text detected. Ensure the image contains readable text.");
+            alert("No text detected. Ensure the image contains readable text.");
+            return;
+        }
+
+        console.log("Detecting options and question...");
+
+        const optionsStartY = detectOptionsStart(words);
+        if (optionsStartY === null) {
+            console.warn("No options detected. Check format.");
+            alert("No options detected. Check format.");
+            return;
+        }
+
+        const questionEndY = detectQuestionEnd(words, optionsStartY);
+        if (questionEndY === null) {
+            console.warn("No question end detected. Check format.");
+            alert("No question end detected. Check format.");
+            return;
+        }
+
+        // Handling Large Gap
+        const gap = optionsStartY - questionEndY;
+        console.log(`Detected Gap: ${gap} pixels`);
+        if (gap > 500) {  // Adjust this threshold as needed
+            console.warn("Large gap detected between question and options.");
+            alert("Warning: Large gap detected between question and options.");
+        }
+
+        cropButton.dataset.startY = questionEndY;
+        cropButton.dataset.endY = optionsStartY;
+        cropButton.disabled = false;
+        console.log("Processing completed! Click 'Crop' to crop the image.");
+
+        await worker.terminate();
+    } catch (error) {
+        console.error("Error processing image:", error);
+        alert("Error processing image. Check console.");
     }
-
-    const questionEndY = detectQuestionEnd(words, optionsStartY);
-    if (questionEndY === null) {
-      alert("No question end detected. Check format.");
-      return;
-    }
-
-    cropButton.dataset.startY = questionEndY;
-    cropButton.dataset.endY = optionsStartY;
-    cropButton.disabled = false;
-    alert("Processing completed! Click 'Crop' to crop the image.");
-
-    await worker.terminate();
-  } catch (error) {
-    alert("Error processing image. Check console.");
-    console.error(error);
-  }
 });
 
 // Handle cropping
 cropButton.addEventListener("click", () => {
-  const startY = parseInt(cropButton.dataset.startY);
-  const endY = parseInt(cropButton.dataset.endY);
-  performCropping(startY, endY);
+    const startY = parseInt(cropButton.dataset.startY);
+    const endY = parseInt(cropButton.dataset.endY);
+    performCropping(startY, endY);
 });
 
 function performCropping(startY, endY) {
-  const cropHeight = endY - startY;
-  if (cropHeight <= 0) {
-    alert("Invalid cropping height.");
-    return;
-  }
+    const cropHeight = endY - startY;
+    if (cropHeight <= 0) {
+        console.error("Invalid cropping height.");
+        alert("Invalid cropping height.");
+        return;
+    }
 
-  const croppedCanvas = document.createElement("canvas");
-  const croppedCtx = croppedCanvas.getContext("2d");
-  croppedCanvas.width = canvas.width;
-  croppedCanvas.height = cropHeight;
+    console.log(`Cropping image from Y=${startY} to Y=${endY} (Height: ${cropHeight})`);
 
-  croppedCtx.drawImage(
-    uploadedImage,
-    0, startY, canvas.width, cropHeight,
-    0, 0, canvas.width, cropHeight
-  );
+    const croppedCanvas = document.createElement("canvas");
+    const croppedCtx = croppedCanvas.getContext("2d");
+    croppedCanvas.width = canvas.width;
+    croppedCanvas.height = cropHeight;
 
-  const croppedImage = new Image();
-  croppedImage.src = croppedCanvas.toDataURL("image/png");
-  output.appendChild(croppedImage);
-  alert("Image cropped successfully!");
+    croppedCtx.drawImage(
+        uploadedImage,
+        0, startY, canvas.width, cropHeight,
+        0, 0, canvas.width, cropHeight
+    );
+
+    const croppedImage = new Image();
+    croppedImage.src = croppedCanvas.toDataURL("image/png");
+    output.appendChild(croppedImage);
+    console.log("Image cropped successfully!");
+    alert("Image cropped successfully!");
 }
 
 function detectOptionsStart(words) {
-  console.log("Detecting options start...");
-  for (let i = 0; i < words.length; i++) {
-    if (["A.", "B.", "C.", "D."].includes(words[i].text.trim())) {
-      console.log("Options start detected at Y-coordinate:", words[i].bbox.y0);
-      return words[i].bbox.y0;
+    for (let i = 0; i < words.length; i++) {
+        if (["A.", "B.", "C.", "D."].includes(words[i].text.trim())) {
+            console.log(`Options start detected at Y=${words[i].bbox.y0}`);
+            return words[i].bbox.y0;
+        }
     }
-  }
-  console.warn("No options start detected.");
-  return null;
+    return null;
 }
 
 function detectQuestionEnd(words, optionsStartY) {
-  console.log("Detecting question end...");
-  let lastTextY = 0;
-  let largeGapDetected = false;
-
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const currentY = word.bbox.y1;
-
-    if (currentY >= optionsStartY) break;
-
-    if (lastTextY > 0 && (currentY - lastTextY) > 20) {
-      largeGapDetected = true;
-      console.log("Large vertical gap detected, assuming question end at Y:", lastTextY);
-      break;
+    let lastTextY = 0;
+    for (let i = 0; i < words.length; i++) {
+        const currentY = words[i].bbox.y1;
+        if (currentY >= optionsStartY) break;
+        lastTextY = currentY;
     }
-
-    lastTextY = currentY;
-  }
-
-  if (largeGapDetected) {
+    console.log(`Question end detected at Y=${lastTextY}`);
     return lastTextY;
-  }
-
-  console.warn("No clear question end detected.");
-  return lastTextY;
 }
