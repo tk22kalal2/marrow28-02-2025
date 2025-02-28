@@ -107,16 +107,17 @@ function cropCurrentImage() {
             return;
         }
 
-        performCropping(optionsStartY);
+        alert("Cropping above detected options start...");
+        performCropping(0, optionsStartY);
         
         await worker.terminate();
     };
 }
 
-function performCropping(startY) {
+function performCropping(startY, endY) {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-    const cropHeight = startY;
+    const cropHeight = endY - startY;
 
     if (cropHeight <= 0) {
         alert("Invalid cropping area.");
@@ -130,7 +131,7 @@ function performCropping(startY) {
 
     croppedCtx.drawImage(
         canvas, 
-        0, 0, canvas.width, cropHeight, 
+        0, startY, canvas.width, cropHeight, 
         0, 0, canvas.width, cropHeight
     );
 
