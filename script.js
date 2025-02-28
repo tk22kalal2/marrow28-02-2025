@@ -71,7 +71,7 @@ function showNextImage() {
     }
 }
 
-async function cropCurrentImage() {
+function cropCurrentImage() {
     let outputImage = document.getElementById("outputImage");
     if (!outputImage.src) {
         alert("No image displayed to crop!");
@@ -107,22 +107,16 @@ async function cropCurrentImage() {
             return;
         }
 
-        const questionEndY = detectQuestionEnd(words, optionsStartY);
-        console.log("Question end detected at:", questionEndY);
-        if (questionEndY === null) {
-            alert("No question end detected.");
-            return;
-        }
-
-        performCropping(questionEndY, optionsStartY);
+        performCropping(optionsStartY);
+        
         await worker.terminate();
     };
 }
 
-function performCropping(startY, endY) {
+function performCropping(startY) {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-    const cropHeight = endY - startY;
+    const cropHeight = startY;
 
     if (cropHeight <= 0) {
         alert("Invalid cropping area.");
@@ -136,7 +130,7 @@ function performCropping(startY, endY) {
 
     croppedCtx.drawImage(
         canvas, 
-        0, startY, canvas.width, cropHeight, 
+        0, 0, canvas.width, cropHeight, 
         0, 0, canvas.width, cropHeight
     );
 
@@ -156,24 +150,4 @@ function detectOptionsStart(words) {
         }
     }
     return null;
-}
-
-function detectQuestionEnd(words, optionsStartY) {
-    let lastTextY = 0;
-    let significantGapThreshold = 30;
-    
-    for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        const currentY = word.bbox.y1;
-        
-        if (currentY >= optionsStartY) break;
-        
-        if (lastTextY > 0 && (currentY - lastTextY) > significantGapThreshold) {
-            console.log("Significant gap detected, considering this as question end.");
-            return lastTextY;
-        }
-        lastTextY = currentY;
-    }
-    
-    return lastTextY;
 }
