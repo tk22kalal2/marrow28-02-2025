@@ -1,74 +1,157 @@
-let croppedImages = [];
-let currentIndex = 0;
+const uploadImage = document.getElementById("uploadImage");
+const processButton = document.getElementById("processButton");
+const cropButton = document.getElementById("cropButton");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const output = document.getElementById("output");
+let uploadedImage = null;
 
-function processImage() {
-    const input = document.getElementById('imageUpload');
-    if (!input.files.length) return alert("Please upload an image!");
-    
+// Handle image upload
+uploadImage.addEventListener("change", (event) => {
+  alert("Uploading image...");
+
+  const file = event.target.files[0];
+  if (!file) {
+    alert("No file selected. Please upload an image.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
     const img = new Image();
-    const file = input.files[0];
-    const reader = new FileReader();
+    img.src = e.target.result;
 
-    reader.onload = function(e) {
-        img.src = e.target.result;
+    img.onload = () => {
+      alert("Image uploaded successfully! Rendering on canvas...");
+      uploadedImage = img;
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      processButton.disabled = false;
     };
-    reader.readAsDataURL(file);
+  };
 
-    img.onload = function() {
-        detectQuestions(img);
-    };
-}
+  reader.readAsDataURL(file);
+});
 
-function detectQuestions(img) {
-    Tesseract.recognize(img, 'eng').then(({ data }) => {
-        let positions = [];
-        let textLines = data.lines;
-        
-        textLines.forEach((line) => {
-            if (line.text.match(/^\d+\./)) {
-                positions.push(line.bbox.y0);
-            }
-        });
+// Handle process image
+processButton.addEventListener("click", async () => {
+  if (!uploadedImage) {
+    alert("No image uploaded yet. Please upload an image first.");
+    return;
+  }
 
-        positions.push(img.height); // Add last position (end of image)
-        splitImage(img, positions);
-    });
-}
+  try {
+    alert("Starting OCR process...");
+    const worker = Tesseract.createWorker();
 
-function splitImage(img, positions) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    croppedImages = [];
-    currentIndex = 0;
-    
-    for (let i = 0; i < positions.length - 1; i++) {
-        let y1 = positions[i];
-        let y2 = positions[i + 1];
-        let height = y2 - y1;
-        
-        canvas.width = img.width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, y1, img.width, height, 0, 0, img.width, height);
-        
-        croppedImages.push(canvas.toDataURL("image/png"));
+    await worker.load();
+    await worker.loadLanguage("eng");
+    await worker.initialize("eng");
+    alert("OCR initialized successfully! Reading image text...");
+
+    const { data: { words } } = await worker.recognize(uploadedImage);
+
+    if (!words || words.length === 0) {
+      alert("No text detected. Ensure the image contains readable text.");
+      return;
     }
-    
-    showNextImage();
+
+    alert("Detecting options and question...");
+
+    const optionsStartY = detectOptionsStart(words);
+    if (optionsStartY === null) {
+      alert("No options detected. Check format.");
+      return;
+    }
+
+    const questionEndY = detectQuestionEnd(words, optionsStartY);
+    if (questionEndY === null) {
+      alert("No question end detected. Check format.");
+      return;
+    }
+
+    cropButton.dataset.startY = questionEndY;
+    cropButton.dataset.endY = optionsStartY;
+    cropButton.disabled = false;
+    alert("Processing completed! Click 'Crop' to crop the image.");
+
+    await worker.terminate();
+  } catch (error) {
+    alert("Error processing image. Check console.");
+    console.error(error);
+  }
+});
+
+// Handle cropping
+cropButton.addEventListener("click", () => {
+  const startY = parseInt(cropButton.dataset.startY);
+  const endY = parseInt(cropButton.dataset.endY);
+  performCropping(startY, endY);
+});
+
+function performCropping(startY, endY) {
+  const cropHeight = endY - startY;
+  if (cropHeight <= 0) {
+    alert("Invalid cropping height.");
+    return;
+  }
+
+  const croppedCanvas = document.createElement("canvas");
+  const croppedCtx = croppedCanvas.getContext("2d");
+  croppedCanvas.width = canvas.width;
+  croppedCanvas.height = cropHeight;
+
+  croppedCtx.drawImage(
+    uploadedImage,
+    0, startY, canvas.width, cropHeight,
+    0, 0, canvas.width, cropHeight
+  );
+
+  const croppedImage = new Image();
+  croppedImage.src = croppedCanvas.toDataURL("image/png");
+  output.appendChild(croppedImage);
+  alert("Image cropped successfully!");
 }
 
-function showNextImage() {
-    if (currentIndex < croppedImages.length) {
-        let outputImage = document.getElementById("outputImage");
-        outputImage.src = croppedImages[currentIndex];
-        outputImage.style.display = "block";
-
-        let nextBtn = document.getElementById("nextBtn");
-        if (currentIndex < croppedImages.length - 1) {
-            nextBtn.style.display = "block";
-        } else {
-            nextBtn.style.display = "none";
-        }
-        
-        currentIndex++;
+function detectOptionsStart(words) {
+  console.log("Detecting options start...");
+  for (let i = 0; i < words.length; i++) {
+    if (["A.", "B.", "C.", "D."].includes(words[i].text.trim())) {
+      console.log("Options start detected at Y-coordinate:", words[i].bbox.y0);
+      return words[i].bbox.y0;
     }
+  }
+  console.warn("No options start detected.");
+  return null;
+}
+
+function detectQuestionEnd(words, optionsStartY) {
+  console.log("Detecting question end...");
+  let lastTextY = 0;
+  let largeGapDetected = false;
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const currentY = word.bbox.y1;
+
+    if (currentY >= optionsStartY) break;
+
+    if (lastTextY > 0 && (currentY - lastTextY) > 20) {
+      largeGapDetected = true;
+      console.log("Large vertical gap detected, assuming question end at Y:", lastTextY);
+      break;
+    }
+
+    lastTextY = currentY;
+  }
+
+  if (largeGapDetected) {
+    return lastTextY;
+  }
+
+  console.warn("No clear question end detected.");
+  return lastTextY;
 }
