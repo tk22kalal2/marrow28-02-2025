@@ -48,7 +48,13 @@ processButton.addEventListener("click", async () => {
     try {
         console.log("Starting OCR process...");
         
-        const worker = await Tesseract.createWorker("eng");
+        const worker = Tesseract.createWorker({
+            logger: (m) => console.log(m)  // Logs OCR progress
+        });
+
+        await worker.load();
+        await worker.loadLanguage("eng");
+        await worker.initialize("eng");
 
         console.log("OCR initialized successfully! Reading image text...");
         const { data: { words } } = await worker.recognize(uploadedImage);
