@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Splitter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <h2>Upload Screenshot to Split Questions</h2>
+    <input type="file" id="imageUpload" accept="image/*">
+    <button onclick="processImage()">Start Processing</button>
+    
+    <div id="imageContainer">
+        <img id="outputImage" style="display: none; width: 100%; max-width: 500px; margin-top: 10px;">
+    </div>
+    
+    <button id="nextBtn" style="display: none; margin-top: 10px;" onclick="showNextImage()">Next Image</button>
+</body>
+</html>
