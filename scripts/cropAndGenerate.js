@@ -1,5 +1,5 @@
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const API_KEY = "gsk_yy8xbTlJISG7MB5rtNWGdyb3FYMoamQEG41U6CbrGvthgU0N61"; // Use your valid API key
+const API_KEY = "gsk_yy8xbTlJISG7MB5rtNWGdyb3FYMoamQEG41U6CbrGvthgU0N61"; // Use
 
 let logs = [];
 
