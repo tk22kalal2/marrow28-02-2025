@@ -3,20 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Cropper</title>
-    <style>
-        canvas { max-width: 100%; border: 1px solid black; }
-        img { max-width: 100%; display: block; margin-top: 10px; }
-    </style>
+    <title>Image Processing</title>
 </head>
 <body>
+
     <input type="file" id="uploadImage" accept="image/*">
     <button id="processButton" disabled>Process Image</button>
     <button id="cropButton" disabled>Crop Image</button>
+
     <canvas id="canvas"></canvas>
     <div id="output"></div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js"></script>
+
+    <script src="https://unpkg.com/tesseract.js"></script>
     <script src="script.js"></script>
+
 </body>
 </html>
