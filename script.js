@@ -1,158 +1,74 @@
-const uploadImage = document.getElementById("uploadImage");
-const processButton = document.getElementById("processButton");
-const cropButton = document.getElementById("cropButton");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const output = document.getElementById("output");
-let uploadedImage = null;
+let croppedImages = [];
+let currentIndex = 0;
 
-// Handle image upload
-uploadImage.addEventListener("change", (event) => {
-    console.log("Uploading image...");
-
-    const file = event.target.files[0];
-    if (!file) {
-        console.warn("No file selected. Please upload an image.");
-        alert("No file selected. Please upload an image.");
-        return;
-    }
-
+function processImage() {
+    const input = document.getElementById('imageUpload');
+    if (!input.files.length) return alert("Please upload an image!");
+    
+    const img = new Image();
+    const file = input.files[0];
     const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = new Image();
+
+    reader.onload = function(e) {
         img.src = e.target.result;
-
-        img.onload = () => {
-            console.log("Image uploaded successfully! Rendering on canvas...");
-            uploadedImage = img;
-
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-
-            processButton.disabled = false;
-        };
     };
-
     reader.readAsDataURL(file);
-});
 
-// Handle process image
-processButton.addEventListener("click", async () => {
-    if (!uploadedImage) {
-        console.error("No image uploaded yet. Please upload an image first.");
-        alert("No image uploaded yet. Please upload an image first.");
-        return;
-    }
+    img.onload = function() {
+        detectQuestions(img);
+    };
+}
 
-    try {
-        console.log("Starting OCR process...");
+function detectQuestions(img) {
+    Tesseract.recognize(img, 'eng').then(({ data }) => {
+        let positions = [];
+        let textLines = data.lines;
         
-        const worker = Tesseract.createWorker({
-            logger: (m) => console.log(m)  // Logs OCR progress
+        textLines.forEach((line) => {
+            if (line.text.match(/^\d+\./)) {
+                positions.push(line.bbox.y0);
+            }
         });
 
-        await worker.load();
-        await worker.loadLanguage("eng");
-        await worker.initialize("eng");
-
-        console.log("OCR initialized successfully! Reading image text...");
-        const { data: { words } } = await worker.recognize(uploadedImage);
-
-        if (!words || words.length === 0) {
-            console.warn("No text detected. Ensure the image contains readable text.");
-            alert("No text detected. Ensure the image contains readable text.");
-            return;
-        }
-
-        console.log("Detecting options and question...");
-
-        const optionsStartY = detectOptionsStart(words);
-        if (optionsStartY === null) {
-            console.warn("No options detected. Check format.");
-            alert("No options detected. Check format.");
-            return;
-        }
-
-        const questionEndY = detectQuestionEnd(words, optionsStartY);
-        if (questionEndY === null) {
-            console.warn("No question end detected. Check format.");
-            alert("No question end detected. Check format.");
-            return;
-        }
-
-        // Handling Large Gap
-        const gap = optionsStartY - questionEndY;
-        console.log(`Detected Gap: ${gap} pixels`);
-        if (gap > 500) {  // Adjust this threshold as needed
-            console.warn("Large gap detected between question and options.");
-            alert("Warning: Large gap detected between question and options.");
-        }
-
-        cropButton.dataset.startY = questionEndY;
-        cropButton.dataset.endY = optionsStartY;
-        cropButton.disabled = false;
-        console.log("Processing completed! Click 'Crop' to crop the image.");
-
-        await worker.terminate();
-    } catch (error) {
-        console.error("Error processing image:", error);
-        alert("Error processing image. Check console.");
-    }
-});
-
-// Handle cropping
-cropButton.addEventListener("click", () => {
-    const startY = parseInt(cropButton.dataset.startY);
-    const endY = parseInt(cropButton.dataset.endY);
-    performCropping(startY, endY);
-});
-
-function performCropping(startY, endY) {
-    const cropHeight = endY - startY;
-    if (cropHeight <= 0) {
-        console.error("Invalid cropping height.");
-        alert("Invalid cropping height.");
-        return;
-    }
-
-    console.log(`Cropping image from Y=${startY} to Y=${endY} (Height: ${cropHeight})`);
-
-    const croppedCanvas = document.createElement("canvas");
-    const croppedCtx = croppedCanvas.getContext("2d");
-    croppedCanvas.width = canvas.width;
-    croppedCanvas.height = cropHeight;
-
-    croppedCtx.drawImage(
-        uploadedImage,
-        0, startY, canvas.width, cropHeight,
-        0, 0, canvas.width, cropHeight
-    );
-
-    const croppedImage = new Image();
-    croppedImage.src = croppedCanvas.toDataURL("image/png");
-    output.appendChild(croppedImage);
-    console.log("Image cropped successfully!");
-    alert("Image cropped successfully!");
+        positions.push(img.height); // Add last position (end of image)
+        splitImage(img, positions);
+    });
 }
 
-function detectOptionsStart(words) {
-    for (let i = 0; i < words.length; i++) {
-        if (["A.", "B.", "C.", "D."].includes(words[i].text.trim())) {
-            console.log(`Options start detected at Y=${words[i].bbox.y0}`);
-            return words[i].bbox.y0;
-        }
+function splitImage(img, positions) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    croppedImages = [];
+    currentIndex = 0;
+    
+    for (let i = 0; i < positions.length - 1; i++) {
+        let y1 = positions[i];
+        let y2 = positions[i + 1];
+        let height = y2 - y1;
+        
+        canvas.width = img.width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, y1, img.width, height, 0, 0, img.width, height);
+        
+        croppedImages.push(canvas.toDataURL("image/png"));
     }
-    return null;
+    
+    showNextImage();
 }
 
-function detectQuestionEnd(words, optionsStartY) {
-    let lastTextY = 0;
-    for (let i = 0; i < words.length; i++) {
-        const currentY = words[i].bbox.y1;
-        if (currentY >= optionsStartY) break;
-        lastTextY = currentY;
+function showNextImage() {
+    if (currentIndex < croppedImages.length) {
+        let outputImage = document.getElementById("outputImage");
+        outputImage.src = croppedImages[currentIndex];
+        outputImage.style.display = "block";
+
+        let nextBtn = document.getElementById("nextBtn");
+        if (currentIndex < croppedImages.length - 1) {
+            nextBtn.style.display = "block";
+        } else {
+            nextBtn.style.display = "none";
+        }
+        
+        currentIndex++;
     }
-    console.log(`Question end detected at Y=${lastTextY}`);
-    return lastTextY;
 }
