@@ -69,8 +69,7 @@ function showNextImage() {
         document.getElementById("cropBtn").style.display = "block";
         document.getElementById("nextBtn").style.display = currentIndex < croppedImages.length - 1 ? "block" : "none";
         document.getElementById("makeQuestionBtn").style.display = "block";
-        document.getElementById("mergeMakeQuestionBtn").style.display = "block";
-        
+
         console.log("Displaying cropped image", currentIndex + 1);
         currentIndex++;
     }
@@ -158,7 +157,7 @@ function detectOptionsStart(words) {
     return null;
 }
 
-async function mergeMakeQuestion() {
+async function makeQuestion() {
     let outputImage = document.getElementById("outputImage");
     if (!outputImage.src) {
         alert("No image displayed to extract text!");
@@ -179,10 +178,10 @@ async function mergeMakeQuestion() {
     }
 
     console.log("Extracted Text:", text);
-    getFormattedQuestionWithImage(text, outputImage.src);
+    getFormattedQuestion(text);
 }
 
-async function getFormattedQuestionWithImage(text, imageUrl) {
+async function getFormattedQuestion(text) {
     const response = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -192,7 +191,7 @@ async function getFormattedQuestionWithImage(text, imageUrl) {
         body: JSON.stringify({
             model: "mixtral-8x7b-32768",
             messages: [
-                { role: "system", content: "Extract and format the given text into a structured question format." },
+                { role: "system", content: "Extract and format the given text into a structured question format: \n\nQuestion:\nOptions:\nA) ...\nB) ...\nC) ...\nD) ...\nCorrect Answer:\nExplanation:" },
                 { role: "user", content: text }
             ],
             max_tokens: 300
@@ -200,5 +199,9 @@ async function getFormattedQuestionWithImage(text, imageUrl) {
     });
 
     const result = await response.json();
-    document.getElementById("generatedQuestion").innerHTML = `<img src="${imageUrl}" /><br>${result.choices[0].message.content}`;
+    if (result.choices && result.choices.length > 0) {
+        document.getElementById("generatedQuestion").innerText = result.choices[0].message.content;
+    } else {
+        alert("Failed to generate the question.");
+    }
 }
