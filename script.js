@@ -45,7 +45,8 @@ processButton.addEventListener("click", async () => {
 
   try {
     alert("Starting OCR process...");
-    const worker = Tesseract.createWorker();
+    const worker = await Tesseract.createWorker();
+
 
     await worker.load();
     await worker.loadLanguage("eng");
