@@ -3,15 +3,7 @@ const API_KEY = "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";
 let logs = [];
 
 // Ensure the button exists before adding the event listener
-document.addEventListener('DOMContentLoaded', () => {
-    const generateBtn = document.getElementById("generateQuestionBtn");
-    if (generateBtn) {
-        generateBtn.addEventListener("click", handleGenerateQuestion);
-        console.log("✅ Event listener added to Generate Question button");
-    } else {
-        console.error("❌ Generate Question button not found!");
-    }
-});
+console.log('cropAndGenerate.js loaded');
 
 async function handleGenerateQuestion() {
     console.log("🚀 Generate Question button clicked");
