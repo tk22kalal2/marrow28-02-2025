@@ -42,11 +42,11 @@
     <img id="outputImage" style="display: none; width: 100%; max-width: 500px; margin-top: 10px;">
   </div>
 
-  <!-- These buttons are from your existing functionality -->
+  <!-- Existing buttons -->
   <button id="cropBtn" style="display: none; margin-top: 10px;" onclick="cropCurrentImage()">Crop Options</button>
   <button id="nextBtn" style="display: none; margin-top: 10px;" onclick="showNextImage()">Next Image</button>
   <button id="makeQuestionBtn" style="display: none; margin-top: 10px;" onclick="makeQuestion()">Make Question</button>
-  <!-- New Generate Question button which triggers the merged workflow -->
+  <!-- New Generate Question button -->
   <button id="generateQuestionBtn" style="margin-top: 10px;">Generate Question</button>
   <button id="showLogsBtn" style="margin-top: 10px;" onclick="showLogs()">Show Logs</button>
 
@@ -60,6 +60,12 @@
     <p id="generatedQuestion"></p>
   </div>
 
+  <!-- New Cropped Question Container -->
+  <div id="croppedQuestionContainer" style="margin-top: 20px; display: none;">
+    <h3>Question Image</h3>
+    <div id="croppedOutput"></div>
+  </div>
+
   <!-- Log Modal -->
   <div id="logModal">
     <h3>Logs</h3>
@@ -67,12 +73,10 @@
     <button id="closeLogBtn" onclick="closeLogModal()">Close</button>
   </div>
 
-  <!-- Script files (cropping.js and imageProcessing.js remain unchanged) -->
+  <!-- Script files -->
   <script defer src="scripts/cropping.js"></script>
   <script defer src="scripts/imageProcessing.js"></script>
-  <!-- Modified question generation script below: -->
   <script defer src="scripts/questionGeneration.js"></script>
   <script defer src="scripts/cropAndGenerate.js"></script>
-  
 </body>
 </html>
