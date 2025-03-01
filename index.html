@@ -7,19 +7,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v2.1.1/dist/tesseract.min.js"></script>
-  <!-- In HTML body - keep existing elements but add this script -->
-<script>
-// Add this directly in HTML for quick debugging
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded');
-    if(document.getElementById("generateQuestionBtn")) {
-        console.log('Found generate button');
-        document.getElementById("generateQuestionBtn").addEventListener("click", handleGenerateQuestion);
-    } else {
-        console.error('Generate button not found!');
-    }
-});
-</script>
   <style>
     #logModal {
       display: none;
