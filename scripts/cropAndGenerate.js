@@ -1,113 +1,142 @@
-document.getElementById("generateQuestionBtn").addEventListener("click", async function() {
-    logMessage("Starting process to generate MCQ...");
+const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const API_KEY = "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";
+let logs = [];
+
+document.getElementById("generateQuestionBtn").addEventListener("click", handleGenerateQuestion);
+
+async function handleGenerateQuestion() {
+    logs = [];
+    logMessage("Starting question generation process...");
     
-    let outputImage = document.getElementById("outputImage");
+    const outputImage = document.getElementById("outputImage");
     if (!outputImage.src) {
-        alert("No image displayed to process!");
-        logMessage("Error: No image available.");
+        alert("Please upload an image first!");
+        logMessage("Error: No image found");
         return;
     }
-    
-    logMessage("Cropped image ready.");
-    
-    const img = new Image();
-    img.src = outputImage.src;
-    
-    img.onload = async () => {
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
+
+    try {
+        // Initialize image processing
+        const img = new Image();
+        img.src = outputImage.src;
         
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
+        await new Promise((resolve) => {
+            img.onload = resolve;
+        });
+
+        // OCR Processing
+        logMessage("Initializing OCR...");
         const worker = Tesseract.createWorker();
         await worker.load();
         await worker.loadLanguage("eng");
         await worker.initialize("eng");
         
-        logMessage("Extracting text from cropped image...");
-        
-        const { data: { words } } = await worker.recognize(img);
+        // Process image once for both cropping and text extraction
+        logMessage("Processing image...");
+        const { data: { text, words } } = await worker.recognize(img);
         await worker.terminate();
-        
+
+        // Crop question section
+        logMessage("Detecting question section...");
         const optionsStartY = detectOptionsStart(words);
         if (optionsStartY === null) {
-            alert("No options detected.");
-            logMessage("Error: No options detected.");
+            alert("Could not find options in the image");
+            logMessage("Error: Options not detected");
             return;
         }
-        
-        const croppedCanvas = document.createElement("canvas");
-        const croppedCtx = croppedCanvas.getContext("2d");
-        croppedCanvas.width = canvas.width;
-        croppedCanvas.height = optionsStartY;
-        
-        croppedCtx.drawImage(canvas, 0, 0, canvas.width, optionsStartY, 0, 0, canvas.width, optionsStartY);
-        
-        const croppedImageSrc = croppedCanvas.toDataURL("image/png");
-        
-        logMessage("Extracting text from cropped section...");
-        
-        const { data: { text } } = await Tesseract.recognize(croppedImageSrc, "eng");
-        
-        logMessage("Extracted Text: \n" + text);
-        
-        if (!text.trim()) {
-            alert("No text detected. Please use a clearer image.");
-            logMessage("Error: No text detected.");
-            return;
-        }
-        
-        logMessage("Generating MCQ using Groq API...");
-        
-        const requestData = {
-            model: "mixtral-8x7b-32768",
-            messages: [
-                { role: "system", content: "Extract and format the given text into a structured question format: \n\nQuestion:\nOptions:\nA) ...\nB) ...\nC) ...\nD) ...\nCorrect Answer:\nExplanation:" },
-                { role: "user", content: text }
-            ],
-            max_tokens: 300
-        };
-        
-        try {
-            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer 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`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(requestData)
-            });
-        
-            logMessage("Groq API request sent. Waiting for response...");
-            
-            const result = await response.json();
-            
-            if (result.choices && result.choices.length > 0) {
-                const formattedQuestion = result.choices[0].message.content;
-                
-                document.getElementById("questionFrame").style.display = "block";
-                document.getElementById("generatedQuestion").innerHTML = `<img src="${croppedImageSrc}" style="max-width: 100%;"><br><br>${formattedQuestion}`;
-                
-                logMessage("MCQ successfully generated and displayed.");
-            } else {
-                alert("Failed to generate the question.");
-                logMessage("Error: Failed to generate the question.");
-            }
-        } catch (error) {
-            console.error("Error fetching from Groq API:", error.message);
-            alert(`An error occurred: ${error.message}`);
-            logMessage(`API Error: ${error.message}`);
-        }
-    };
-});
+
+        performCropping(img, 0, optionsStartY);
+        document.getElementById("croppedQuestionContainer").style.display = "block";
+
+        // Process text
+        logMessage("Formatting extracted text...");
+        await getFormattedQuestion(text);
+        document.getElementById("questionFrame").style.display = "block";
+
+    } catch (error) {
+        logMessage(`Error: ${error.message}`);
+        alert("An error occurred during processing");
+    }
+}
+
+function performCropping(img, startY, endY) {
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    const cropHeight = endY - startY;
+    const croppedCanvas = document.createElement("canvas");
+    croppedCanvas.width = canvas.width;
+    croppedCanvas.height = cropHeight;
+    
+    const croppedCtx = croppedCanvas.getContext("2d");
+    croppedCtx.drawImage(canvas, 0, startY, canvas.width, cropHeight, 0, 0, canvas.width, cropHeight);
+
+    const croppedImage = new Image();
+    croppedImage.src = croppedCanvas.toDataURL("image/png");
+    document.getElementById("croppedOutput").innerHTML = "";
+    document.getElementById("croppedOutput").appendChild(croppedImage);
+}
 
 function detectOptionsStart(words) {
-    for (let i = 0; i < words.length; i++) {
-        if (["A.", "B.", "C.", "D."].includes(words[i].text.trim())) {
-            return words[i].bbox.y0;
+    const optionMarkers = new Set(["A.", "B.", "C.", "D."]);
+    for (let word of words) {
+        if (optionMarkers.has(word.text.trim())) {
+            return word.bbox.y0;
         }
     }
     return null;
+}
+
+async function getFormattedQuestion(text) {
+    try {
+        logMessage("Connecting to Groq API...");
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: "mixtral-8x7b-32768",
+                messages: [{
+                    role: "system",
+                    content: "Extract and format as: Question: [question]\nOptions:\nA) ...\nB) ...\nC) ...\nD) ...\nCorrect Answer: [letter]\nExplanation: [text]"
+                }, {
+                    role: "user",
+                    content: text
+                }],
+                temperature: 0.7,
+                max_tokens: 500
+            })
+        });
+
+        const data = await response.json();
+        if (data.choices?.[0]?.message?.content) {
+            const formatted = data.choices[0].message.content;
+            document.getElementById("generatedQuestion").textContent = formatted;
+            logMessage("Successfully formatted question");
+        } else {
+            throw new Error("Invalid API response");
+        }
+    } catch (error) {
+        logMessage(`API Error: ${error.message}`);
+        throw error;
+    }
+}
+
+// Logging functions
+function logMessage(message) {
+    logs.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+    document.getElementById("logContent").textContent = logs.join("\n");
+}
+
+function showLogs() {
+    document.getElementById("logModal").style.display = "block";
+}
+
+function closeLogModal() {
+    document.getElementById("logModal").style.display = "none";
 }
